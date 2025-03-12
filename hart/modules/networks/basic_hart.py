@@ -3,11 +3,54 @@
 This file is adopted and modified from https://github.com/FoundationVision/VAR/blob/main/models/basic_var.py
 """
 
+# Disable fused accelerator if hart_backend is not available
+try:
+    import hart_backend.fused_kernels
+except ModuleNotFoundError:
+    print("hart_backend.fused_kernels not found. Fused accelerators are disabled, using fallback implementations.")
+    import torch
+
+    # Define a local rotate_half (same as the one later in the file)
+    def fallback_rotate_half(x):
+        x1 = x[..., : x.shape[-1] // 2]
+        x2 = x[..., x.shape[-1] // 2:]
+        return torch.cat((-x2, x1), dim=-1)
+
+    def fallback_fused_rope_forward_func(t, freqs, flag):
+        # Compute cosine and sine from freqs and apply rotary transformation.
+        cos = freqs.cos()
+        sin = freqs.sin()
+        return t * cos + fallback_rotate_half(t) * sin
+
+    def fallback_fused_rope_backward_func(*args, **kwargs):
+        # Backward pass is not implemented in this fallback.
+        raise NotImplementedError("Backward pass not implemented in fallback.")
+
+    def fallback_fused_rope_with_pos_forward_func(t, freqs, flag):
+        cos = freqs.cos()
+        sin = freqs.sin()
+        return t * cos + fallback_rotate_half(t) * sin
+
+    def fallback_rms_norm(out, x, weight, eps, use_quant):
+        variance = x.pow(2).mean(-1, keepdim=True)
+        normalized = x * torch.rsqrt(variance + eps)
+        out.copy_(weight * normalized)
+
+    class DummyFusedKernels:
+        fused_rope_forward_func = staticmethod(fallback_fused_rope_forward_func)
+        fused_rope_backward_func = staticmethod(fallback_fused_rope_backward_func)
+        fused_rope_with_pos_forward_func = staticmethod(fallback_fused_rope_with_pos_forward_func)
+        rms_norm = staticmethod(fallback_rms_norm)
+
+    class DummyHartBackend:
+        fused_kernels = DummyFusedKernels
+
+    hart_backend = DummyHartBackend()
+
 import functools
 import math
 from typing import Tuple, Union
 
-import hart_backend.fused_kernels
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
