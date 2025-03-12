@@ -7,7 +7,7 @@ import functools
 import math
 from typing import Tuple, Union
 
-import hart_backend.fused_kernels
+from hart.kernels.csrc.rms_norm import rms_norm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
