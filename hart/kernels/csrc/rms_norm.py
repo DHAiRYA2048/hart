@@ -2,7 +2,7 @@ import torch
 import os
 from torch.utils.cpp_extension import load
 
-path = "/home/hart/hart/kernels/csrc/" #MODIFY THIS
+path = "/hart/kernels/csrc/" #MODIFY THIS
 # Load the CUDA extension at runtime
 NVCC_FLAGS = [
     "-O2",
