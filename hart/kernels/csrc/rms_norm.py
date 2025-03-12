@@ -2,7 +2,7 @@ import torch
 import os
 from torch.utils.cpp_extension import load
 
-path = "/hart/kernels/csrc/" #MODIFY THIS
+path = "/content/hart/hart/kernels/csrc/rms_norm.cpp" #MODIFY THIS (this is for colab)
 # Load the CUDA extension at runtime
 NVCC_FLAGS = [
     "-O2",
